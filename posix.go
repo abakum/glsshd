@@ -40,6 +40,32 @@ func GetHostKey(ssh string) (pri string) {
 	return
 }
 
+// unix sock
+func pipe(sess *session) string {
+	const (
+		agentTempDir    = "auth-agent"
+		agentListenFile = "listener.sock"
+	)
+	dir, err := os.MkdirTemp("", agentTempDir)
+	if err != nil {
+		dir = os.TempDir()
+	}
+	return path.Join(dir, agentListenFile)
+}
+
+//close sock then rm parent dir
+func doner(l net.Listener, s gl.Session) {
+	<-s.Context().Done()
+	p:=l.Addr().String()
+	log.Println(p, "done")
+	l.Close()
+	dir := path.Dir(p)
+	if dir == os.TempDir() {
+		// only rm dir case its parent is /tmp
+		os.Remove(dir)
+	}
+}
+
 
 func SubsystemHandlerAgent(s gl.Session) {
 	l, err := NewAgentListener(s)
@@ -128,19 +154,6 @@ func Env(s gl.Session, shell string) (e []string) {
 		"LOGNAME="+s.User(),
 	)
 	return
-}
-
-// unix sock
-func pipe(sess *session) string {
-	const (
-		agentTempDir    = "auth-agent"
-		agentListenFile = "listener.sock"
-	)
-		dir, err := os.MkdirTemp("", agentTempDir)
-	if err != nil {
-		dir = os.TempDir()
-	}
-	return fmt.Sprintf("%s=%s", SSH_AUTH_SOCK, path.Join(dir, agentListenFile))
 }
 
 func home(s gl.Session) string {

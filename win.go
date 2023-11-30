@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	PIPE          = `\\.\pipe\`
+	PIPE          = `\\.\pipe`
 	authAgentPipe = "auth-agent"
 	BIN           = "OpenSSH"
 )
@@ -75,13 +75,8 @@ func psArgs(commands []string) (args []string) {
 	return
 }
 
-var unload bool
-
 func UnloadEmbedded() error {
-	if unload {
-		return nil
-	}
-	unload = true
+	log.Println("UnloadEmbedded")
 	src := path.Join(BIN, runtime.GOARCH)
 	root := os.Getenv("ProgramFiles")
 	trg := BIN
@@ -116,9 +111,14 @@ func UnloadEmbedded() error {
 	})
 }
 
+var once sync.Once
+
 func ShellArgs(commands []string) (args []string) {
 	const SH = "ssh-shellhost.exe"
-	UnloadEmbedded()
+	once.Do(func() {
+		UnloadEmbedded()
+	})
+
 	path := ""
 	var err error
 	for _, shell := range []string{
@@ -268,7 +268,13 @@ func AllDone(ppid int) (err error) {
 	return PDone(ppid)
 }
 
-// fake SubsystemHandlers for agent
+func doner(l net.Listener, s gl.Session) {
+	<-s.Context().Done()
+	log.Println(l.Addr().String(), "done")
+	l.Close()
+}
+
+// SubsystemHandlers for agent
 func SubsystemHandlerAgent(s gl.Session) {
 	l, err := NewAgentListener(s)
 	if err != nil {
@@ -364,7 +370,7 @@ func ForwardAgentConnections(l net.Listener, s gl.Session) {
 
 // named pipe
 func pipe(sess *session) string {
-	return fmt.Sprintf(`%s=%s%s\%s\%s`, SSH_AUTH_SOCK, PIPE, authAgentPipe, sess.LocalAddr(), sess.RemoteAddr())
+	return fmt.Sprintf(`%s\%s\%s\%s`, PIPE, authAgentPipe, sess.LocalAddr(), sess.RemoteAddr())
 }
 
 func home(s gl.Session) string {

@@ -11,19 +11,17 @@ package main
 
 import (
 	_ "embed" //no lint
-	"fmt"
 	"log"
 	"os"
 
-	"github.com/abakum/winssh"
+	. "github.com/abakum/winssh"
 	gl "github.com/gliderlabs/ssh"
 	"github.com/xlab/closer"
 	"golang.org/x/crypto/ssh"
 )
 
 const (
-	Addr          = ":2222"
-	SSH_AUTH_SOCK = "SSH_AUTH_SOCK="
+	Addr = ":2222"
 )
 
 var (
@@ -31,24 +29,10 @@ var (
 	authorized_keys []byte
 )
 
-// logging sessions
-func SessionRequestCallback(s gl.Session, requestType string) bool {
-	if s == nil {
-		return false
-	}
-	ptyReq, _, isPty := s.Pty()
-	pr := ""
-	if isPty {
-		pr = fmt.Sprintf("%v", ptyReq)
-	}
-	log.Println(s.RemoteAddr(), requestType, s.Command(), pr)
-	return true
-}
-
 func main() {
 	defer closer.Close()
 	closer.Bind(func() {
-		winssh.AllDone(os.Getpid())
+		AllDone(os.Getpid())
 	})
 
 	ForwardedTCPHandler := &gl.ForwardedTCPHandler{}
@@ -61,8 +45,8 @@ func main() {
 			return true
 		}),
 		RequestHandlers: map[string]gl.RequestHandler{
-			"tcpip-forward":        ForwardedTCPHandler.HandleSSHRequest, // to allow remote tcp/ip forwarding
-			"cancel-tcpip-forward": ForwardedTCPHandler.HandleSSHRequest, // to allow remote tcp/ip forwarding
+			"tcpip-forward":        ForwardedTCPHandler.HandleSSHRequest, // to allow remote forwarding
+			"cancel-tcpip-forward": ForwardedTCPHandler.HandleSSHRequest, // to allow remote forwarding
 		},
 		// before for ssh ssh -R host:port:x:x
 
@@ -72,14 +56,14 @@ func main() {
 			return true
 		}),
 		ChannelHandlers: map[string]gl.ChannelHandler{
-			"session":      winssh.SessionHandler, // to allow agent forwarding
-			"direct-tcpip": gl.DirectTCPIPHandler, // to allow local tcp/ip forwarding
+			"session":      SessionHandler,        // to allow agent forwarding
+			"direct-tcpip": gl.DirectTCPIPHandler, // to allow local forwarding
 		},
 		// before for ssh -L x:dhost:dport
 
 		SubsystemHandlers: map[string]gl.SubsystemHandler{
-			"sftp":                  winssh.SubsystemHandlerSftp,  // to allow sftp
-			winssh.AgentRequestType: winssh.SubsystemHandlerAgent, // to allow agent forwarding
+			"sftp":           SubsystemHandlerSftp,  // to allow sftp
+			AgentRequestType: SubsystemHandlerAgent, // to allow agent forwarding
 		},
 		SessionRequestCallback: SessionRequestCallback,
 	}
@@ -91,11 +75,11 @@ func main() {
 	}
 
 	// next for server key
-	pri := winssh.GetHostKey(cwd) // /etc/ssh
+	pri := GetHostKey(cwd) // /etc/ssh
 	pemBytes, err := os.ReadFile(pri)
 	var key gl.Signer
 	if err != nil {
-		key, err = winssh.GenerateSigner(pri)
+		key, err = GenerateSigner(pri)
 	} else {
 		key, err = ssh.ParsePrivateKey(pemBytes)
 	}
@@ -112,12 +96,12 @@ func main() {
 	// before for server key
 
 	// next for client keys
-	authorized := winssh.GetUserKeys(cwd)                              //.ssh
-	authorized = winssh.BytesToAuthorized(authorized_keys, authorized) //from embed
+	authorized := GetUserKeys(cwd)                              //.ssh
+	authorized = BytesToAuthorized(authorized_keys, authorized) //from embed
 
 	publicKeyOption := gl.PublicKeyAuth(func(ctx gl.Context, key gl.PublicKey) bool {
-		authorized = winssh.KeyToAuthorized(key, authorized) //from first user
-		return winssh.Authorized(key, authorized)
+		authorized = KeyToAuthorized(key, authorized) //from first user
+		return Authorized(key, authorized)
 	})
 
 	sshd.SetOption(publicKeyOption)
@@ -129,7 +113,7 @@ func main() {
 			authorizedKey := ssh.MarshalAuthorizedKey(s.PublicKey())
 			log.Println("used public key", string(authorizedKey))
 		}
-		winssh.ShellOrExec(s)
+		ShellOrExec(s)
 	})
 
 	log.Println("starting ssh server on", sshd.Addr)
