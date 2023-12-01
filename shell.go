@@ -6,10 +6,17 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"runtime"
+	"strings"
+	"syscall"
+	"time"
 
 	"github.com/abakum/go-console"
 	gl "github.com/gliderlabs/ssh"
+	"github.com/zzl/go-win32api/win32"
 )
+
+const shellhost = "ssh-shellhost.exe"
 
 // for not PTY as
 // `klink a@:2222 -T`
@@ -26,7 +33,6 @@ func noPTY(s gl.Session) {
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Dir = home(s)
 	cmd.Env = append(os.Environ(), e...)
-
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		fmt.Fprint(s, "unable to open stdout pipe", err)
@@ -48,10 +54,15 @@ func noPTY(s gl.Session) {
 	}
 	ppid := cmd.Process.Pid
 	log.Println(args, ppid)
-
-	done := s.Context().Done()
+	if runtime.GOOS == "windows" && strings.Contains(args[0], shellhost) {
+		time.Sleep(time.Millisecond * 33)
+		pids, _ := GetTreePids(uint32(ppid))
+		if len(pids) > 1 {
+			win32.EnumWindows(syscall.NewCallback(hide), uintptr(pids[1]))
+		}
+	}
 	go func() {
-		<-done
+		<-s.Context().Done()
 		if shell {
 			fmt.Fprint(stdin, "exit\n")
 			stdin.Close()

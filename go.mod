@@ -17,6 +17,8 @@ require (
 	github.com/iamacarpet/go-winpty v1.0.4 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/stretchr/testify v1.8.1 // indirect
+	github.com/zzl/go-win32api v1.2.0 // indirect
+	github.com/zzl/go-win32api/v2 v2.1.0 // indirect
 	golang.org/x/mod v0.8.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/tools v0.6.0 // indirect

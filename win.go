@@ -22,6 +22,7 @@ import (
 
 	"github.com/Microsoft/go-winio"
 	gl "github.com/gliderlabs/ssh"
+	"github.com/zzl/go-win32api/v2/win32"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -114,7 +115,6 @@ func UnloadEmbedded() error {
 var once sync.Once
 
 func ShellArgs(commands []string) (args []string) {
-	const SH = "ssh-shellhost.exe"
 	once.Do(func() {
 		UnloadEmbedded()
 	})
@@ -122,8 +122,8 @@ func ShellArgs(commands []string) (args []string) {
 	path := ""
 	var err error
 	for _, shell := range []string{
-		filepath.Join(os.Getenv("ProgramFiles"), BIN, SH),
-		SH,
+		filepath.Join(os.Getenv("ProgramFiles"), BIN, shellhost),
+		shellhost,
 	} {
 		log.Println(shell)
 		if path, err = exec.LookPath(shell); err == nil {
@@ -381,4 +381,52 @@ func home(s gl.Session) string {
 		return user
 	}
 	return users
+}
+
+func hide(hwnd uintptr, lParam uintptr) uintptr {
+	var dwProcessId uint32
+	win32.GetWindowThreadProcessId(hwnd, &dwProcessId)
+	if uint32(lParam) == dwProcessId {
+		win32.ShowWindow(hwnd, win32.SW_HIDE)
+		log.Println(hwnd, GetWindowText(hwnd), GetClassName(hwnd))
+		return 0
+	}
+	return 1
+}
+
+func BufToPwstr(size uint) *uint16 {
+	buf := make([]uint16, size*2+1)
+	return &buf[0]
+}
+
+func GetClassName(hwnd win32.HWND) (ClassName string) {
+	const nMaxCount = 256
+
+	if hwnd == 0 {
+		return
+	}
+
+	lpClassName := BufToPwstr(nMaxCount)
+	copied, er := win32.GetClassName(hwnd, lpClassName, nMaxCount)
+	if copied == 0 || er != win32.NO_ERROR {
+		return
+	}
+	ClassName = win32.PwstrToStr(lpClassName)
+	return
+}
+
+func GetWindowText(hwnd win32.HWND) (WindowText string) {
+	const nMaxCount = 256
+
+	if hwnd == 0 {
+		return
+	}
+
+	lpString := BufToPwstr(nMaxCount)
+	copied, er := win32.GetWindowText(hwnd, lpString, nMaxCount)
+	if copied == 0 || er != win32.NO_ERROR {
+		return
+	}
+	WindowText = win32.PwstrToStr(lpString)
+	return
 }
