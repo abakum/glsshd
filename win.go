@@ -21,6 +21,7 @@ import (
 	"unsafe"
 
 	"github.com/Microsoft/go-winio"
+	"github.com/abakum/go-console"
 	gl "github.com/gliderlabs/ssh"
 	"github.com/zzl/go-win32api/v2/win32"
 	"golang.org/x/crypto/ssh"
@@ -79,11 +80,12 @@ func psArgs(commands []string) (args []string) {
 func UnloadEmbedded() error {
 	log.Println("UnloadEmbedded")
 	src := path.Join(BIN, runtime.GOARCH)
-	root := os.Getenv("ProgramFiles")
+	root := os.Getenv("ProgramFiles") // "c:\Program Files"
+	user := console.UsrBin()          // "c:\ProgramData\Program Files"
 	trg := BIN
 	srcLen := len(strings.Split(src, "/"))
-	dirs := append([]string{root}, strings.Split(trg, `\`)...)
-	return fs.WalkDir(fs.FS(bin), src, func(unix string, d fs.DirEntry, err error) error {
+	dirs := append([]string{root}, strings.Split(trg, `\`)...) // "c:\Program Files\"
+	write := func(unix string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -109,7 +111,13 @@ func UnloadEmbedded() error {
 		}
 		log.Println(win, len(bytes), "->", size)
 		return os.WriteFile(win, bytes, 0666)
-	})
+	}
+	err := fs.WalkDir(fs.FS(bin), src, write)
+	if err != nil {
+		dirs = append([]string{user}, strings.Split(trg, `\`)...)
+		err = fs.WalkDir(fs.FS(bin), src, write)
+	}
+	return err
 }
 
 var once sync.Once
@@ -123,6 +131,7 @@ func ShellArgs(commands []string) (args []string) {
 	var err error
 	for _, shell := range []string{
 		filepath.Join(os.Getenv("ProgramFiles"), BIN, shellhost),
+		filepath.Join(console.UsrBin(), BIN, shellhost),
 		shellhost,
 	} {
 		log.Println(shell)
@@ -381,17 +390,6 @@ func home(s gl.Session) string {
 		return user
 	}
 	return users
-}
-
-func hide(hwnd uintptr, lParam uintptr) uintptr {
-	var dwProcessId uint32
-	win32.GetWindowThreadProcessId(hwnd, &dwProcessId)
-	if uint32(lParam) == dwProcessId {
-		win32.ShowWindow(hwnd, win32.SW_HIDE)
-		log.Println(hwnd, GetWindowText(hwnd), GetClassName(hwnd))
-		return 0
-	}
-	return 1
 }
 
 func BufToPwstr(size uint) *uint16 {

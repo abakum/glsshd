@@ -8,15 +8,19 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/abakum/go-console"
 	"github.com/xlab/closer"
 )
 
-const shellhost = "ssh-shellhost.exe"
+const (
+	shellhost = "ssh-shellhost.exe"
+	OpenSSH   = "OpenSSH"
+)
 
 func main() {
 	defer closer.Close()
 
-	dir := filepath.Join(os.Getenv("ALLUSERSPROFILE"), "ssh")
+	dir := filepath.Join(console.UsrBin(), OpenSSH)
 	cmd := exec.Command(filepath.Join(dir, shellhost), os.Args[1:]...)
 
 	ferr, err := os.Create(filepath.Join(dir, "err"))

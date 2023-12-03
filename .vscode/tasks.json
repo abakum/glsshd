@@ -97,5 +97,26 @@
 				"kind": "build",
 			},
 		}
+		{
+			"type": "go",
+			"label": "go: build file 386",
+			"command": "build",
+			"options": {
+				"env": {
+					"GOARCH": "386"
+				}
+			},
+			"args": [
+				"-C",
+				"${fileDirname}",
+				"${file}"
+			],
+			"problemMatcher": [
+				"$go"
+			],
+			"group": {
+				"kind": "build",
+			},
+		}
 	]
 }
