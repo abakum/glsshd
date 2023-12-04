@@ -1,11 +1,11 @@
 //go:build windows && 386
 // +build windows,386
 
-package winssh
+package openssh
 
 import (
 	"embed"
 )
 
-//go:embed OpenSSH/386/*
+//go:embed 386/*
 var bin embed.FS

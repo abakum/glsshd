@@ -66,7 +66,7 @@ func doner(l net.Listener, s gl.Session) {
 	}
 }
 
-
+// SubsystemHandlers for agent
 func SubsystemHandlerAgent(s gl.Session) {
 	l, err := NewAgentListener(s)
 	if err != nil {
@@ -89,12 +89,6 @@ func NewAgentListener(s gl.Session) (net.Listener, error) {
 		return nil, err
 	}
 	return l, nil
-}
-
-
-
-proc ShellArgs(commands []string) []string{
- return commands[:]
 }
 
 func ShArgs(commands []string) (args []string) {
@@ -156,7 +150,7 @@ func Env(s gl.Session, shell string) (e []string) {
 	return
 }
 
-func home(s gl.Session) string {
+func Home(s gl.Session) string {
 	users := "~"
 	user := users + s.User()
 	_, err := os.Stat(user)

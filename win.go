@@ -6,31 +6,24 @@ package winssh
 import (
 	"fmt"
 	"io"
-	"io/fs"
 	"log"
 	"net"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
-	"runtime"
 	"slices"
-	"strings"
 	"sync"
 	"syscall"
 	"unsafe"
 
 	"github.com/Microsoft/go-winio"
-	"github.com/abakum/go-console"
 	gl "github.com/gliderlabs/ssh"
-	"github.com/zzl/go-win32api/v2/win32"
 	"golang.org/x/crypto/ssh"
 )
 
 const (
 	PIPE          = `\\.\pipe`
 	authAgentPipe = "auth-agent"
-	BIN           = "OpenSSH"
 )
 
 // get authorized keys paths
@@ -78,76 +71,6 @@ func psArgs(commands []string) (args []string) {
 			"-Mta", //for Win7
 		)
 	}
-	return
-}
-
-// copy from embed
-func UnloadEmbedded(src, root, trg string, keep bool) error {
-	// keep == true if not exist then write
-	// keep == false it will be replaced if it differs from the embed
-
-	log.Println("UnloadEmbedded")
-	srcLen := len(strings.Split(src, "/"))
-	dirs := append([]string{root}, strings.Split(trg, `\`)...)
-	write := func(unix string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-		win := filepath.Join(append(dirs, strings.Split(unix, "/")[srcLen:]...)...)
-		if d.IsDir() {
-			_, err = os.Stat(win)
-			if err != nil {
-				err = os.MkdirAll(win, 0755)
-			}
-			return err
-		}
-		bytes, err := bin.ReadFile(unix)
-		if err != nil {
-			return err
-		}
-		var size int64
-		fi, err := os.Stat(win)
-		if err == nil {
-			size = fi.Size()
-			if int64(len(bytes)) == size || keep {
-				return nil
-			}
-		}
-		log.Println(win, len(bytes), "->", size)
-		return os.WriteFile(win, bytes, 0644)
-	}
-	return fs.WalkDir(fs.FS(bin), src, write)
-}
-
-var once sync.Once
-
-// PTY from OpenSSH
-func ShellArgs(commands []string) (args []string) {
-	once.Do(func() {
-		UnloadEmbedded(path.Join(BIN, runtime.GOARCH), console.UsrBin(), BIN, false)
-	})
-
-	path := ""
-	var err error
-	for _, shell := range []string{
-		filepath.Join(console.UsrBin(), BIN, shellhost),
-		filepath.Join(os.Getenv("ProgramFiles"), BIN, shellhost),
-	} {
-		if path, err = exec.LookPath(shell); err == nil {
-			break
-		}
-	}
-	if err != nil { //fallback
-		return commands
-	}
-	args = []string{path}
-	opt := "-c"
-	shell := len(commands) == 1
-	if shell {
-		opt = "---pty"
-	}
-	args = append(args, opt)
-	args = append(args, commands...)
 	return
 }
 
@@ -384,8 +307,8 @@ func pipe(sess *session) string {
 	return fmt.Sprintf(`%s\%s\%s\%s`, PIPE, authAgentPipe, sess.LocalAddr(), sess.RemoteAddr())
 }
 
-// set home of user
-func home(s gl.Session) string {
+// set Home of user
+func Home(s gl.Session) string {
 	users, _ := filepath.Split(os.Getenv("USERPROFILE"))
 	user := filepath.Join(users, s.User())
 	_, err := os.Stat(user)
@@ -393,44 +316,4 @@ func home(s gl.Session) string {
 		return user
 	}
 	return users
-}
-
-// create buffer for string
-func BufToPwstr(size uint) *uint16 {
-	buf := make([]uint16, size*2+1)
-	return &buf[0]
-}
-
-// get class name by hwnd
-func GetClassName(hwnd win32.HWND) (ClassName string) {
-	const nMaxCount = 256
-
-	if hwnd == 0 {
-		return
-	}
-
-	lpClassName := BufToPwstr(nMaxCount)
-	copied, er := win32.GetClassName(hwnd, lpClassName, nMaxCount)
-	if copied == 0 || er != win32.NO_ERROR {
-		return
-	}
-	ClassName = win32.PwstrToStr(lpClassName)
-	return
-}
-
-// get title of window by hwnd
-func GetWindowText(hwnd win32.HWND) (WindowText string) {
-	const nMaxCount = 256
-
-	if hwnd == 0 {
-		return
-	}
-
-	lpString := BufToPwstr(nMaxCount)
-	copied, er := win32.GetWindowText(hwnd, lpString, nMaxCount)
-	if copied == 0 || er != win32.NO_ERROR {
-		return
-	}
-	WindowText = win32.PwstrToStr(lpString)
-	return
 }
