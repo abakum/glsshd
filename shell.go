@@ -219,6 +219,7 @@ func openSshPTY(s gl.Session) {
 		if Width == win.Width {
 			return nil
 		}
+		shrink := Width > win.Width
 		Width = win.Width
 		log.Println("PTY SetSize", win)
 		//https://github.com/PowerShell/openssh-portable/blob/4ee8dc64982b62cd520417556515383908091b76/contrib/win32/win32compat/shell-host.c#L804
@@ -236,12 +237,15 @@ func openSshPTY(s gl.Session) {
 				log.Println(err)
 			}
 		} else {
+			if shrink {
+				fmt.Fprintf(in, "mode")
+				fmt.Fprintf(in, " con")
+				fmt.Fprintf(in, " cols=%d\n", win.Width-1)
+			}
 			fmt.Fprintf(in, "mode")
 			fmt.Fprintf(in, " con")
-			fmt.Fprintf(in, " cols=%d", win.Width)
-			// fmt.Fprintf(in, " lines=%d", win.Height)
+			fmt.Fprintf(in, " cols=%d\n", win.Width)
 		}
-		fmt.Fprintf(in, "\n")
 		return nil
 	}
 
