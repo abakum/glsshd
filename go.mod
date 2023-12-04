@@ -9,7 +9,6 @@ require (
 	github.com/gliderlabs/ssh v0.3.5
 	github.com/pkg/sftp v1.13.6
 	github.com/xlab/closer v1.1.0
-	github.com/zzl/go-win32api v1.2.0
 	github.com/zzl/go-win32api/v2 v2.1.0
 	golang.org/x/crypto v0.16.0
 )
