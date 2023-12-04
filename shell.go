@@ -22,11 +22,8 @@ const (
 	M77       = time.Millisecond * 77
 )
 
-// `klink a@:2222 -T`
-// `klink a@:2222 commands`
-// `kitty_portable a@:2222 -T`
-// `ssh -p 2222 a@ command`
-// `ssh -p 2222 a@ -T`
+// `ssh -p 2222 a@127.0.0.1 command`
+// `ssh -p 2222 a@127.0.0.1 -T`
 func noPTY(s gl.Session) {
 	args := ShArgs(s.Command())
 	e := Env(s, args[0])
@@ -55,32 +52,34 @@ func noPTY(s gl.Session) {
 	}
 	ppid := cmd.Process.Pid
 	log.Println(args, ppid)
+
 	go func() {
 		<-s.Context().Done()
 		stdout.Close()
-		log.Println(args, "done")
 	}()
 
 	go io.Copy(stdin, s)
 	io.Copy(s, stdout)
-	err = cmd.Wait()
-	if err != nil {
-		log.Println(args[0], err)
-	}
+	log.Println(args, "done")
 }
 
 // for shell and exec
 func ShellOrExec(s gl.Session) {
+	RemoteAddr := s.RemoteAddr()
+	defer func() {
+		log.Println(RemoteAddr, "done")
+		if s != nil {
+			s.Close()
+		}
+	}()
+
 	ptyReq, winCh, isPty := s.Pty()
 	if !isPty {
 		noPTY(s)
 		return
 	}
-	// `kitty_portable a@:2222`
-	// `klink a@:2222`
-	// `klink a@:2222 -t commands`
-	// ssh -p 2222 a@
-	// ssh -p 2222 a@ -t commands
+	// ssh -p 2222 a@127.0.0.1
+	// ssh -p 2222 a@127.0.0.1 -t commands
 	stdout, err := console.New(ptyReq.Window.Width, ptyReq.Window.Width)
 	if err != nil {
 		log.Println("unable to create console", err)
@@ -107,15 +106,8 @@ func ShellOrExec(s gl.Session) {
 		return
 	}
 
-	log.Println(args)
-	RemoteAddr := s.RemoteAddr()
-	defer func() {
-		log.Println(RemoteAddr, "done")
-		if s != nil {
-			s.Close()
-		}
-	}()
-
+	ppid, _ := stdout.Pid()
+	log.Println(args, ppid)
 	go func() {
 		for {
 			if stdout == nil || s == nil {
@@ -140,9 +132,6 @@ func ShellOrExec(s gl.Session) {
 
 	go io.Copy(stdout, s)
 	io.Copy(s, stdout)
-	if _, err := stdout.Wait(); err != nil {
-		log.Println(args, err)
-	}
 }
 
 // parent done
@@ -157,6 +146,9 @@ func PDone(ppid int) (err error) {
 	return
 }
 
+// PTY from OpenSSH
+// amd64 to handle winCh over ctderr
+// 386 ugly to handle winCh by `mod con columns=`
 func openSshPTY(s gl.Session) {
 	args := ShArgs(s.Command())
 	e := Env(s, args[0])
@@ -195,20 +187,6 @@ func openSshPTY(s gl.Session) {
 		noPTY(s) // fallback
 		return
 	}
-	defer func() {
-		log.Println(args, "done")
-		if stdout != nil {
-			stdout.Close()
-		}
-	}()
-
-	RemoteAddr := s.RemoteAddr()
-	defer func() {
-		log.Println(RemoteAddr, "done")
-		if s != nil {
-			s.Close()
-		}
-	}()
 
 	ppid := cmd.Process.Pid
 	log.Println(args, ppid)
@@ -235,14 +213,14 @@ func openSshPTY(s gl.Session) {
 	ptyReq, winCh, _ := s.Pty()
 	var Width int
 	SetSize := func(tty, in io.Writer, win gl.Window) error {
+		if win.Height == 0 && win.Width == 0 {
+			return fmt.Errorf("0x0")
+		}
 		if Width == win.Width {
 			return nil
 		}
 		Width = win.Width
 		log.Println("PTY SetSize", win)
-		if win.Height == 0 && win.Width == 0 {
-			return fmt.Errorf("0x0")
-		}
 		//https://github.com/PowerShell/openssh-portable/blob/4ee8dc64982b62cd520417556515383908091b76/contrib/win32/win32compat/shell-host.c#L804
 		if runtime.GOARCH == "amd64" {
 			//https://github.com/PowerShell/Win32-OpenSSH/issues/1222#issuecomment-409052375
@@ -290,8 +268,5 @@ func openSshPTY(s gl.Session) {
 
 	go io.Copy(stdin, s)
 	io.Copy(s, stdout)
-	err = cmd.Wait()
-	if err != nil {
-		log.Println(args[0], err)
-	}
+	log.Println(args, "done")
 }

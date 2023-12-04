@@ -64,27 +64,31 @@ func GetHostKey(ssh string) (pri string) {
 	return
 }
 
+// powershell instead cmd
 func psArgs(commands []string) (args []string) {
 	args = []string{"powershell.exe", "-NoProfile", "-NoLogo"}
 	if len(commands) > 0 {
 		args = append(args,
 			"-NonInteractive",
-			"-Command")
+			"-Command",
+		)
 		args = append(args, commands...)
 	} else {
-		args = append(args, "-Mta") //for Win7
+		args = append(args,
+			"-Mta", //for Win7
+		)
 	}
 	return
 }
 
-func UnloadEmbedded() error {
+// copy from embed
+func UnloadEmbedded(src, root, trg string, keep bool) error {
+	// keep == true if not exist then write
+	// keep == false it will be replaced if it differs from the embed
+
 	log.Println("UnloadEmbedded")
-	src := path.Join(BIN, runtime.GOARCH)
-	root := os.Getenv("ProgramFiles") // "c:\Program Files"
-	user := console.UsrBin()          // "c:\ProgramData\Program Files"
-	trg := BIN
 	srcLen := len(strings.Split(src, "/"))
-	dirs := append([]string{root}, strings.Split(trg, `\`)...) // "c:\Program Files\"
+	dirs := append([]string{root}, strings.Split(trg, `\`)...)
 	write := func(unix string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
@@ -93,7 +97,7 @@ func UnloadEmbedded() error {
 		if d.IsDir() {
 			_, err = os.Stat(win)
 			if err != nil {
-				err = os.MkdirAll(win, 0666)
+				err = os.MkdirAll(win, 0755)
 			}
 			return err
 		}
@@ -105,50 +109,40 @@ func UnloadEmbedded() error {
 		fi, err := os.Stat(win)
 		if err == nil {
 			size = fi.Size()
-			if int64(len(bytes)) == size {
+			if int64(len(bytes)) == size || keep {
 				return nil
 			}
 		}
 		log.Println(win, len(bytes), "->", size)
-		return os.WriteFile(win, bytes, 0666)
+		return os.WriteFile(win, bytes, 0644)
 	}
-	err := fs.WalkDir(fs.FS(bin), src, write)
-	if err != nil {
-		dirs = append([]string{user}, strings.Split(trg, `\`)...)
-		err = fs.WalkDir(fs.FS(bin), src, write)
-	}
-	return err
+	return fs.WalkDir(fs.FS(bin), src, write)
 }
 
 var once sync.Once
 
+// PTY from OpenSSH
 func ShellArgs(commands []string) (args []string) {
 	once.Do(func() {
-		UnloadEmbedded()
+		UnloadEmbedded(path.Join(BIN, runtime.GOARCH), console.UsrBin(), BIN, false)
 	})
 
 	path := ""
 	var err error
 	for _, shell := range []string{
-		filepath.Join(os.Getenv("ProgramFiles"), BIN, shellhost),
 		filepath.Join(console.UsrBin(), BIN, shellhost),
-		shellhost,
+		filepath.Join(os.Getenv("ProgramFiles"), BIN, shellhost),
 	} {
-		log.Println(shell)
 		if path, err = exec.LookPath(shell); err == nil {
 			break
 		}
 	}
-	shell := len(commands) == 1
 	if err != nil { //fallback
-		if shell {
-			commands = []string{}
-		}
-		args = psArgs(commands)
-		return
+		return commands
 	}
 	args = []string{path}
 	opt := "-c"
+	shell := len(commands) == 1
 	if shell {
 		opt = "---pty"
 	}
@@ -157,6 +151,7 @@ func ShellArgs(commands []string) (args []string) {
 	return
 }
 
+// cmd or powershell as shell
 func ShArgs(commands []string) (args []string) {
 	const SH = "cmd.exe"
 	path := ""
@@ -169,8 +164,9 @@ func ShArgs(commands []string) (args []string) {
 			break
 		}
 	}
-	if path == "" {
-		path = SH
+	if err != nil {
+		args = psArgs(commands)
+		return
 	}
 	args = []string{path}
 	if len(commands) > 0 {
@@ -249,6 +245,7 @@ func GetTreePids(rootPid uint32) ([]uint32, error) {
 	}
 }
 
+// contain e in list
 func contains(list []uint32, e uint32) bool {
 	for _, l := range list {
 		if l == e {
@@ -258,6 +255,7 @@ func contains(list []uint32, e uint32) bool {
 	return false
 }
 
+// done all chield of ppid and ppid
 func AllDone(ppid int) (err error) {
 	log.Println("AllDone", ppid)
 	pids, err := GetTreePids(uint32(ppid))
@@ -277,6 +275,7 @@ func AllDone(ppid int) (err error) {
 	return PDone(ppid)
 }
 
+// if s done then close l
 func doner(l net.Listener, s gl.Session) {
 	<-s.Context().Done()
 	log.Println(l.Addr().String(), "done")
@@ -294,6 +293,7 @@ func SubsystemHandlerAgent(s gl.Session) {
 	ForwardAgentConnections(l, s)
 }
 
+// listen pipe
 func NewAgentListener(s gl.Session) (net.Listener, error) {
 	p := getPipe(s)
 	if p == "" {
@@ -306,6 +306,7 @@ func NewAgentListener(s gl.Session) (net.Listener, error) {
 	return l, nil
 }
 
+// set env
 func Env(s gl.Session, shell string) (e []string) {
 	e = s.Environ()
 	log.Println(e)
@@ -345,6 +346,7 @@ func Env(s gl.Session, shell string) (e []string) {
 	return
 }
 
+// handle pipe connection
 func ForwardAgentConnections(l net.Listener, s gl.Session) {
 	sshConn := s.Context().Value(gl.ContextKeyConn).(ssh.Conn)
 	for {
@@ -382,6 +384,7 @@ func pipe(sess *session) string {
 	return fmt.Sprintf(`%s\%s\%s\%s`, PIPE, authAgentPipe, sess.LocalAddr(), sess.RemoteAddr())
 }
 
+// set home of user
 func home(s gl.Session) string {
 	users, _ := filepath.Split(os.Getenv("USERPROFILE"))
 	user := filepath.Join(users, s.User())
@@ -392,11 +395,13 @@ func home(s gl.Session) string {
 	return users
 }
 
+// create buffer for string
 func BufToPwstr(size uint) *uint16 {
 	buf := make([]uint16, size*2+1)
 	return &buf[0]
 }
 
+// get class name by hwnd
 func GetClassName(hwnd win32.HWND) (ClassName string) {
 	const nMaxCount = 256
 
@@ -413,6 +418,7 @@ func GetClassName(hwnd win32.HWND) (ClassName string) {
 	return
 }
 
+// get title of window by hwnd
 func GetWindowText(hwnd win32.HWND) (WindowText string) {
 	const nMaxCount = 256
 
