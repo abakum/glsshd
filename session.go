@@ -3,6 +3,7 @@ package winssh
 import (
 	"fmt"
 	"log"
+	"time"
 
 	gl "github.com/gliderlabs/ssh"
 	"golang.org/x/crypto/ssh"
@@ -191,7 +192,37 @@ func (sess *session) handleRequests(reqs <-chan *ssh.Request) {
 			sess.Unlock()
 		default:
 			// TODO: debug log
+			if sess.sessReqCb != nil {
+				sess.sessReqCb(sess, req.Type)
+			}
 			req.Reply(false, nil)
+		}
+	}
+}
+
+func Keepalive(s gl.Session, ClientAliveInterval time.Duration, ServerAliveCountMax int) {
+	const name = "keepalive"
+	i := ServerAliveCountMax
+	t := time.NewTicker(ClientAliveInterval)
+	defer t.Stop()
+	for {
+		if s == nil {
+			return
+		}
+		if i <= 0 || t == nil {
+			s.Close()
+			return
+		}
+		select {
+		case <-s.Context().Done():
+			return
+		case <-t.C:
+			_, err := s.SendRequest(name, true, nil)
+			if err == nil {
+				i = ServerAliveCountMax
+			} else {
+				i--
+			}
 		}
 	}
 }

@@ -60,6 +60,9 @@ func SessionHandler(srv *gl.Server, conn *ssh.ServerConn, newChan ssh.NewChannel
 		subsystemHandlers: srv.SubsystemHandlers,
 		ctx:               ctx,
 	}
+	if srv.IdleTimeout > 0 && srv.MaxTimeout > srv.IdleTimeout {
+		go Keepalive(sess, srv.IdleTimeout, int(srv.MaxTimeout/srv.IdleTimeout))
+	}
 	sess.handleRequests(reqs)
 }
 
