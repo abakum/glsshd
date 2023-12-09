@@ -13,6 +13,7 @@ import (
 	_ "embed" //no lint
 	"log"
 	"os"
+	"time"
 
 	. "github.com/abakum/winssh"
 	gl "github.com/gliderlabs/ssh"
@@ -65,7 +66,9 @@ func main() {
 			"sftp":           SubsystemHandlerSftp,  // to allow sftp
 			AgentRequestType: SubsystemHandlerAgent, // to allow agent forwarding
 		},
-		SessionRequestCallback: SessionRequestCallback,
+		SessionRequestCallback: SessionRequest,     //SessionRequestCallback,
+		IdleTimeout:            -time.Second * 100, //-ClientAliveInterval
+		MaxTimeout:             -time.Second * 300, //-ServerAliveCountMax*ClientAliveInterval
 	}
 
 	cwd, err := os.Getwd()
@@ -100,6 +103,10 @@ func main() {
 	authorized = BytesToAuthorized(authorized_keys, authorized) //from embed
 
 	publicKeyOption := gl.PublicKeyAuth(func(ctx gl.Context, key gl.PublicKey) bool {
+		log.Println("user", ctx.User(), "from", ctx.RemoteAddr())
+		// log.Println("used public key", string(ssh.MarshalAuthorizedKey(key)))
+		log.Println("used public key", ssh.FingerprintSHA256(key))
+
 		authorized = KeyToAuthorized(key, authorized) //from first user
 		return Authorized(key, authorized)
 	})
@@ -107,16 +114,20 @@ func main() {
 	sshd.SetOption(publicKeyOption)
 	// before for client keys
 
+	//only for shell or exec
 	gl.Handle(func(s gl.Session) {
-		log.Println("user", s.User())
-		if s.PublicKey() != nil {
-			authorizedKey := ssh.MarshalAuthorizedKey(s.PublicKey())
-			log.Println("used public key", string(authorizedKey))
-		}
 		ShellOrExec(s)
 	})
 
 	log.Println("starting ssh server on", sshd.Addr)
 	log.Fatal(sshd.ListenAndServe())
 
+}
+
+func SessionRequest(s gl.Session, requestType string) bool {
+	if s == nil {
+		return false
+	}
+	log.Println(s.RemoteAddr(), requestType, s.Command())
+	return true
 }

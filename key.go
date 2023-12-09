@@ -56,7 +56,8 @@ func FileToAuthorized(bs []byte, err error) (authorized []gl.PublicKey) {
 	for _, b := range bytes.Split(bs, []byte("\n")) {
 		k, _, _, _, err := gl.ParseAuthorizedKey(b)
 		if err == nil {
-			log.Println("FileToAuthorized", string(b))
+			// log.Println("FileToAuthorized", string(b))
+			log.Println("FileToAuthorized", ssh.FingerprintSHA256(k))
 			authorized = append(authorized, k)
 		}
 	}
@@ -87,7 +88,8 @@ func KeyToAuthorized(key gl.PublicKey, old []gl.PublicKey) []gl.PublicKey {
 	}
 	// only first login
 	b := ssh.MarshalAuthorizedKey(key)
-	log.Println("KeyToAuthorized", string(b))
+	// log.Println("KeyToAuthorized", string(b))
+	log.Println("KeyToAuthorized", ssh.FingerprintSHA256(key))
 	return BytesToAuthorized(b, old)
 }
 

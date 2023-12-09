@@ -2,31 +2,11 @@ package winssh
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	gl "github.com/gliderlabs/ssh"
 	"golang.org/x/crypto/ssh"
 )
-
-// logging sessions
-func SessionRequestCallback(s gl.Session, requestType string) bool {
-	if s == nil {
-		return false
-	}
-	switch requestType {
-	case "shell", "exec":
-		ptyReq, _, isPty := s.Pty()
-		if isPty {
-			log.Println(s.RemoteAddr(), requestType, s.Command(), fmt.Sprintf("%v", ptyReq))
-		} else {
-			log.Println(s.RemoteAddr(), requestType, s.Command())
-		}
-	default:
-		log.Println(s.RemoteAddr(), requestType)
-	}
-	return true
-}
 
 // callback for agentRequest
 // based on github.com/gliderlabs/ssh
