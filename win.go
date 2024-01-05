@@ -42,8 +42,8 @@ func GetHostKey(ssh string) (pri string) {
 		ssh,
 	} {
 		for _, key := range []string{
-			"ssh_host_ed25519_key",
 			"ssh_host_ecdsa_key",
+			"ssh_host_ed25519_key",
 			sshHostKey,
 		} {
 			pri = filepath.Join(dir, key)
