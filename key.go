@@ -104,9 +104,9 @@ func Authorized(key gl.PublicKey, authorized []gl.PublicKey) bool {
 }
 
 // get allowed keys
-func GetUserKeys(cwd string) (authorized []gl.PublicKey) {
+func GetUserKeys(cwd string, fns ...string) (authorized []gl.PublicKey) {
 	aKeyPath = cwd //.ssh
-	for _, akf := range GetUserKeysPaths(cwd) {
+	for _, akf := range GetUserKeysPaths(cwd, fns...) {
 		kk := FileToAuthorized(os.ReadFile(akf))
 		if len(kk) > 0 {
 			log.Println(akf)

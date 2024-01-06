@@ -9,12 +9,12 @@ gl "github.com/gliderlabs/ssh"
 
 
 // get authorized keys paths
-func GetUserKeysPaths(ssh string) []string {
-	return []string{
+func GetUserKeysPaths(ssh string, fns ...string) []string {
+	return append(fns[:],
 		path.Join(ssh, authorizedKeys),
 		path.Join("~",".ssh", authorizedKeys),
 		path.Join("/etc","dropbear", authorizedKeys),
-	}
+	)
 }
 
 // get one key

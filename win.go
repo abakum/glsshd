@@ -27,12 +27,12 @@ const (
 )
 
 // get authorized keys paths
-func GetUserKeysPaths(ssh string) []string {
-	return []string{
+func GetUserKeysPaths(ssh string, fns ...string) []string {
+	return append(fns[:],
 		filepath.Join(ssh, authorizedKeys),
 		filepath.Join(os.Getenv("USERPROFILE"), ".ssh", authorizedKeys),
 		filepath.Join(os.Getenv("ALLUSERSPROFILE"), "ssh", administratorsAuthorizedKeys),
-	}
+	)
 }
 
 // get one key
