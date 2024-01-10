@@ -30,7 +30,7 @@ func GetHostKey(ssh string) (pri string) {
 			sshHostKey,
 		} {
 			pri = path.Join(dir, key)
-			log.Println(pri)
+			ltf.Println(pri)
 			_, err := os.Stat(pri)
 			if err == nil {
 				return
@@ -57,7 +57,7 @@ func pipe(sess *session) string {
 func doner(l net.Listener, s gl.Session) {
 	<-s.Context().Done()
 	p:=l.Addr().String()
-	log.Println(p, "done")
+	ltf.Println(p, "done")
 	l.Close()
 	dir := path.Dir(p)
 	if dir == os.TempDir() {
@@ -120,16 +120,29 @@ func ShArgs(commands []string) (args []string) {
 }
 
 func AllDone(ppid int) (err error){
-	log.Println("AllDone", ppid)
+	ltf.Println("AllDone", ppid)
 	pgid, err := syscall.Getpgid(ppid)
     if err == nil {
 		err=syscall.Kill(-pgid, 15)
         if err==nil{ 
-			log.Println("pgid", pgid, "done")
+			ltf.Println("pgid", pgid, "done")
 			return
 		}
     }
 	return PDone(ppid)
+}
+
+func KidsDone(ppid int) (err error){
+	ltf.Println("AllDone", ppid)
+	pgid, err := syscall.Getpgid(ppid)
+    if err == nil {
+		err=syscall.Kill(-pgid, 15)
+        if err==nil{ 
+			ltf.Println("pgid", pgid, "done")
+			return
+		}
+    }
+	return
 }
 
 func Env(s gl.Session, shell string) (e []string) {

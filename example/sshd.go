@@ -22,10 +22,15 @@ import (
 )
 
 const (
-	Addr = ":2222"
+	Addr      = ":2222"
+	ansiReset = "\u001B[0m"
+	ansiRedBG = "\u001B[41m"
 )
 
 var (
+	letf = log.New(os.Stdout, BUG, log.Ltime|log.Lshortfile)
+	ltf  = log.New(os.Stdout, " ", log.Ltime|log.Lshortfile)
+
 	//go:embed authorized_keys
 	authorized_keys []byte
 )
@@ -42,7 +47,7 @@ func main() {
 		Addr: Addr,
 		// next for ssh -R host:port:x:x
 		ReversePortForwardingCallback: gl.ReversePortForwardingCallback(func(ctx gl.Context, host string, port uint32) bool {
-			log.Println("attempt to bind", host, port, "granted")
+			ltf.Println("attempt to bind", host, port, "granted")
 			return true
 		}),
 		RequestHandlers: map[string]gl.RequestHandler{
@@ -53,7 +58,7 @@ func main() {
 
 		// next for ssh -L x:dhost:dport
 		LocalPortForwardingCallback: gl.LocalPortForwardingCallback(func(ctx gl.Context, dhost string, dport uint32) bool {
-			log.Println("accepted forward", dhost, dport)
+			ltf.Println("accepted forward", dhost, dport)
 			return true
 		}),
 		ChannelHandlers: map[string]gl.ChannelHandler{
@@ -73,7 +78,7 @@ func main() {
 
 	cwd, err := os.Getwd()
 	if err != nil {
-		log.Fatal(err)
+		letf.Fatal(err)
 		return
 	}
 
@@ -87,13 +92,13 @@ func main() {
 		key, err = ssh.ParsePrivateKey(pemBytes)
 	}
 	if err != nil {
-		log.Fatal(err)
+		letf.Fatal(err)
 		return
 	}
 
 	sshd.AddHostKey(key)
 	if len(sshd.HostSigners) < 1 {
-		log.Fatal("host key was not properly added")
+		ltf.Fatal("host key was not properly added")
 		return
 	}
 	// before for server key
@@ -103,9 +108,9 @@ func main() {
 	authorized = BytesToAuthorized(authorized_keys, authorized) //from embed
 
 	publicKeyOption := gl.PublicKeyAuth(func(ctx gl.Context, key gl.PublicKey) bool {
-		log.Println("user", ctx.User(), "from", ctx.RemoteAddr())
-		// log.Println("used public key", string(ssh.MarshalAuthorizedKey(key)))
-		log.Println("used public key", ssh.FingerprintSHA256(key))
+		ltf.Println("user", ctx.User(), "from", ctx.RemoteAddr())
+		// ltf.Println("used public key", string(ssh.MarshalAuthorizedKey(key)))
+		ltf.Println("used public key", ssh.FingerprintSHA256(key))
 
 		authorized = KeyToAuthorized(key, authorized) //from first user
 		return Authorized(key, authorized)
@@ -119,8 +124,8 @@ func main() {
 		ShellOrExec(s)
 	})
 
-	log.Println("starting ssh server on", sshd.Addr)
-	log.Fatal(sshd.ListenAndServe())
+	ltf.Println("starting ssh server on", sshd.Addr)
+	letf.Fatal(sshd.ListenAndServe())
 
 }
 
@@ -128,6 +133,6 @@ func SessionRequest(s gl.Session, requestType string) bool {
 	if s == nil {
 		return false
 	}
-	log.Println(s.RemoteAddr(), requestType, s.Command())
+	ltf.Println(s.RemoteAddr(), requestType, s.Command())
 	return true
 }

@@ -2,7 +2,6 @@ package winssh
 
 import (
 	"io"
-	"log"
 	"os"
 	"os/exec"
 
@@ -21,7 +20,7 @@ func NoPTY(s gl.Session) {
 	cmd.Env = append(os.Environ(), e...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		log.Println("unable to open stdout pipe", err)
+		letf.Println("unable to open stdout pipe", err)
 		return
 	}
 
@@ -29,17 +28,17 @@ func NoPTY(s gl.Session) {
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
-		log.Println("unable to open stdin pipe", err)
+		letf.Println("unable to open stdin pipe", err)
 		return
 	}
 
 	err = cmd.Start()
 	if err != nil {
-		log.Println("could not start", args, err)
+		letf.Println("could not start", args, err)
 		return
 	}
 	ppid := cmd.Process.Pid
-	log.Println(args, ppid)
+	ltf.Println(args, ppid)
 
 	go func() {
 		<-s.Context().Done()
@@ -48,14 +47,14 @@ func NoPTY(s gl.Session) {
 
 	go io.Copy(stdin, s)
 	io.Copy(s, stdout)
-	log.Println(args, "done")
+	ltf.Println(args, "done")
 }
 
 // for shell and exec
 func ShellOrExec(s gl.Session) {
 	RemoteAddr := s.RemoteAddr()
 	defer func() {
-		log.Println(RemoteAddr, "done")
+		ltf.Println(RemoteAddr, "done")
 		if s != nil {
 			s.Close()
 		}
@@ -70,13 +69,13 @@ func ShellOrExec(s gl.Session) {
 	// ssh -p 2222 a@127.0.0.1 -t commands
 	stdout, err := console.New(ptyReq.Window.Width, ptyReq.Window.Width)
 	if err != nil {
-		log.Println("unable to create console", err)
+		letf.Println("unable to create console", err)
 		NoPTY(s)
 		return
 	}
 	args := ShArgs(s.Command())
 	defer func() {
-		log.Println(args, "done")
+		ltf.Println(args, "done")
 		if stdout != nil {
 			stdout.Close()
 		}
@@ -85,13 +84,13 @@ func ShellOrExec(s gl.Session) {
 	stdout.SetENV(Env(s, args[0]))
 	err = stdout.Start(args)
 	if err != nil {
-		log.Println("unable to start", args, err)
+		letf.Println("unable to start", args, err)
 		NoPTY(s)
 		return
 	}
 
 	ppid, _ := stdout.Pid()
-	log.Println(args, ppid)
+	ltf.Println(args, ppid)
 	go func() {
 		for {
 			if stdout == nil || s == nil {
@@ -102,13 +101,13 @@ func ShellOrExec(s gl.Session) {
 				stdout.Close()
 				return
 			case win := <-winCh:
-				log.Println("PTY SetSize", win)
+				ltf.Println("PTY SetSize", win)
 				if win.Height == 0 && win.Width == 0 {
 					stdout.Close()
 					return
 				}
 				if err := stdout.SetSize(win.Width, win.Height); err != nil {
-					log.Println(err)
+					letf.Println(err)
 				}
 			}
 		}
@@ -124,7 +123,7 @@ func PDone(ppid int) (err error) {
 	if err == nil {
 		err = Process.Kill()
 		if err == nil {
-			log.Println("ppid", ppid, "done")
+			ltf.Println("ppid", ppid, "done")
 		}
 	}
 	return

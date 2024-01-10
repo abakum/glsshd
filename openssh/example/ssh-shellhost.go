@@ -15,6 +15,14 @@ import (
 const (
 	shellhost = "ssh-shellhost.exe"
 	OpenSSH   = "OpenSSH"
+	ansiReset = "\u001B[0m"
+	ansiRedBG = "\u001B[41m"
+	BUG       = ansiRedBG + "Ж" + ansiReset
+)
+
+var (
+	letf = log.New(os.Stdout, BUG, log.Ltime|log.Lshortfile)
+	ltf  = log.New(os.Stdout, " ", log.Ltime|log.Lshortfile)
 )
 
 func main() {
@@ -25,38 +33,38 @@ func main() {
 
 	ferr, err := os.Create(filepath.Join(dir, "err"))
 	if err != nil {
-		log.Fatal(err)
+		letf.Fatal(err)
 	}
 	defer ferr.Close()
-	log.SetOutput(ferr)
-	log.Println(cmd.Args)
+	ltf.SetOutput(ferr)
+	ltf.Println(cmd.Args)
 
 	// Attach STDOUT stream
 	cmdOut, err := cmd.StdoutPipe()
 	if err != nil {
-		log.Fatal(err)
+		letf.Fatal(err)
 	}
 	fo, err := os.Create(filepath.Join(dir, "fo"))
 	if err != nil {
-		log.Fatal(err)
+		letf.Fatal(err)
 	}
 	defer fo.Close()
 
 	// Attach STDIN stream
 	cmdIn, err := cmd.StdinPipe()
 	if err != nil {
-		log.Fatal(err)
+		letf.Fatal(err)
 		return
 	}
 	fi, err := os.Create(filepath.Join(dir, "fi"))
 	if err != nil {
-		log.Fatal(err)
+		letf.Fatal(err)
 	}
 	defer fi.Close()
 
 	fe, err := os.Create(filepath.Join(dir, "fe"))
 	if err != nil {
-		log.Fatal(err)
+		letf.Fatal(err)
 	}
 	defer fe.Close()
 
@@ -68,7 +76,7 @@ func main() {
 
 	pr, pw, err := os.Pipe()
 	if err != nil {
-		log.Fatal(err)
+		letf.Fatal(err)
 	}
 	defer pr.Close()
 	defer pw.Close()
@@ -79,7 +87,7 @@ func main() {
 
 	err = cmd.Run()
 	if err != nil {
-		log.Fatal(err)
+		letf.Fatal(err)
 	}
 	// in fe I find
 	// cols120_rows45 := []byte{8, 0, 120, 0, 45, 0}

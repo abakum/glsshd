@@ -6,7 +6,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -56,8 +55,7 @@ func FileToAuthorized(bs []byte, err error) (authorized []gl.PublicKey) {
 	for _, b := range bytes.Split(bs, []byte("\n")) {
 		k, _, _, _, err := gl.ParseAuthorizedKey(b)
 		if err == nil {
-			// log.Println("FileToAuthorized", string(b))
-			log.Println("FileToAuthorized", ssh.FingerprintSHA256(k))
+			ltf.Println("FileToAuthorized", ssh.FingerprintSHA256(k))
 			authorized = append(authorized, k)
 		}
 	}
@@ -70,11 +68,11 @@ func BytesToAuthorized(authorized_keys []byte, old []gl.PublicKey) (authorized [
 	if len(old) > 0 || len(authorized_keys) == 0 {
 		return
 	}
-	log.Println("BytesToAuthorized")
+	ltf.Println("BytesToAuthorized")
 	authorized = FileToAuthorized(authorized_keys, nil)
 	if len(authorized) > 0 {
 		file := filepath.Join(aKeyPath, authorizedKeys)
-		log.Println("WriteFile", file)
+		ltf.Println("WriteFile", file)
 		os.WriteFile(file, authorized_keys, 0644)
 		return
 	}
@@ -88,8 +86,7 @@ func KeyToAuthorized(key gl.PublicKey, old []gl.PublicKey) []gl.PublicKey {
 	}
 	// only first login
 	b := ssh.MarshalAuthorizedKey(key)
-	// log.Println("KeyToAuthorized", string(b))
-	log.Println("KeyToAuthorized", ssh.FingerprintSHA256(key))
+	ltf.Println("KeyToAuthorized", ssh.FingerprintSHA256(key))
 	return BytesToAuthorized(b, old)
 }
 
@@ -109,7 +106,7 @@ func GetUserKeys(cwd string, fns ...string) (authorized []gl.PublicKey) {
 	for _, akf := range GetUserKeysPaths(cwd, fns...) {
 		kk := FileToAuthorized(os.ReadFile(akf))
 		if len(kk) > 0 {
-			log.Println(akf)
+			ltf.Println(akf)
 			authorized = append(authorized, kk...)
 		}
 	}

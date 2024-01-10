@@ -6,7 +6,6 @@ package winssh
 import (
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -47,7 +46,7 @@ func GetHostKey(ssh string) (pri string) {
 			sshHostKey,
 		} {
 			pri = filepath.Join(dir, key)
-			log.Println(pri)
+			ltf.Println(pri)
 			_, err := os.Stat(pri)
 			if err == nil {
 				return
@@ -180,7 +179,7 @@ func contains(list []uint32, e uint32) bool {
 
 // done all chield of ppid and ppid
 func AllDone(ppid int) (err error) {
-	log.Println("AllDone", ppid)
+	ltf.Println("AllDone", ppid)
 	pids, err := GetTreePids(uint32(ppid))
 	slices.Reverse(pids)
 	if err == nil {
@@ -189,19 +188,40 @@ func AllDone(ppid int) (err error) {
 			if err == nil {
 				err = Process.Kill()
 				if err == nil {
-					log.Println("pid", pid, "done")
+					ltf.Println("pid", pid, "done")
 				}
 			}
 		}
 		return
 	}
-	return PDone(ppid)
+	return
+}
+
+// done all chield of ppid
+func KidsDone(ppid int) (err error) {
+	ltf.Println("kidsDone", ppid)
+	pids, err := GetTreePids(uint32(ppid))
+	if err == nil && len(pids) > 1 {
+		pids = pids[1:]
+		slices.Reverse(pids)
+		for _, pid := range pids {
+			Process, err := os.FindProcess(int(pid))
+			if err == nil {
+				err = Process.Kill()
+				if err == nil {
+					ltf.Println("pid", pid, "done")
+				}
+			}
+		}
+		return
+	}
+	return err
 }
 
 // if s done then close l
 func doner(l net.Listener, s gl.Session) {
 	<-s.Context().Done()
-	log.Println(l.Addr().String(), "done")
+	ltf.Println(l.Addr().String(), "done")
 	l.Close()
 }
 
@@ -232,7 +252,7 @@ func NewAgentListener(s gl.Session) (net.Listener, error) {
 // set env
 func Env(s gl.Session, shell string) (e []string) {
 	e = s.Environ()
-	log.Println(e)
+	ltf.Println(e)
 	ra, ok := s.RemoteAddr().(*net.TCPAddr)
 	if ok {
 		la, ok := s.LocalAddr().(*net.TCPAddr)

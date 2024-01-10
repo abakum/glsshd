@@ -29,6 +29,14 @@ const (
 	shellhost = "ssh-shellhost.exe"
 	M77       = time.Millisecond * 77
 	BIN       = "OpenSSH"
+	ansiReset = "\u001B[0m"
+	ansiRedBG = "\u001B[41m"
+	BUG       = ansiRedBG + "Ж" + ansiReset
+)
+
+var (
+	letf = log.New(os.Stdout, BUG, log.Ltime|log.Lshortfile)
+	ltf  = log.New(os.Stdout, " ", log.Ltime|log.Lshortfile)
 )
 
 // copy from embed
@@ -36,7 +44,7 @@ func UnloadEmbedded(src, root, trg string, keep bool) error {
 	// keep == true if not exist then write
 	// keep == false it will be replaced if it differs from the embed
 
-	log.Println("UnloadEmbedded")
+	ltf.Println("UnloadEmbedded")
 	srcLen := len(strings.Split(src, "/"))
 	dirs := append([]string{root}, strings.Split(trg, `\`)...)
 	write := func(unix string, d fs.DirEntry, err error) error {
@@ -63,7 +71,7 @@ func UnloadEmbedded(src, root, trg string, keep bool) error {
 				return nil
 			}
 		}
-		log.Println(win, len(bytes), "->", size)
+		ltf.Println(win, len(bytes), "->", size)
 		return os.WriteFile(win, bytes, 0644)
 	}
 	return fs.WalkDir(fs.FS(bin), src, write)
@@ -114,21 +122,21 @@ func OpenSshPTY(s gl.Session) {
 	cmd.Env = append(os.Environ(), e...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		log.Println("unable to open stdout pipe", err)
+		letf.Println("unable to open stdout pipe", err)
 		winssh.NoPTY(s)
 		return
 	}
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
-		log.Println("unable to open stdin pipe", err)
+		letf.Println("unable to open stdin pipe", err)
 		winssh.NoPTY(s)
 		return
 	}
 
 	cmdErr, tty, err := os.Pipe()
 	if err != nil {
-		log.Println("unable to open stderr pipe", err)
+		letf.Println("unable to open stderr pipe", err)
 		winssh.NoPTY(s)
 		return
 	}
@@ -138,13 +146,13 @@ func OpenSshPTY(s gl.Session) {
 
 	err = cmd.Start()
 	if err != nil {
-		log.Println("unable to start", args, err)
+		letf.Println("unable to start", args, err)
 		winssh.NoPTY(s) // fallback
 		return
 	}
 
 	ppid := cmd.Process.Pid
-	log.Println(args, ppid)
+	ltf.Println(args, ppid)
 	time.Sleep(M77)
 	pids, _ := winssh.GetTreePids(uint32(ppid))
 	var cmdHWND uintptr
@@ -157,14 +165,14 @@ func OpenSshPTY(s gl.Session) {
 			if cmdPID == dwProcessId {
 				cmdHWND = hwnd
 				win32.ShowWindow(hwnd, win32.SW_HIDE)
-				log.Println(hwnd, GetWindowText(hwnd), GetClassName(hwnd))
+				ltf.Println(hwnd, GetWindowText(hwnd), GetClassName(hwnd))
 				return 0
 			}
 			return 1
 		}
 		win32.EnumWindows(syscall.NewCallback(hide), 0)
 	}
-	log.Println(cmdPID, cmdHWND)
+	ltf.Println(cmdPID, cmdHWND)
 	ptyReq, winCh, _ := s.Pty()
 	var Width int
 	SetSize := func(tty, in io.Writer, win gl.Window) error {
@@ -176,7 +184,7 @@ func OpenSshPTY(s gl.Session) {
 		}
 		shrink := Width > win.Width
 		Width = win.Width
-		log.Println("PTY SetSize", win)
+		ltf.Println("PTY SetSize", win)
 		//https://github.com/PowerShell/openssh-portable/blob/4ee8dc64982b62cd520417556515383908091b76/contrib/win32/win32compat/shell-host.c#L804
 		if runtime.GOARCH == "amd64" {
 			//https://github.com/PowerShell/Win32-OpenSSH/issues/1222#issuecomment-409052375
@@ -185,11 +193,11 @@ func OpenSshPTY(s gl.Session) {
 			signalPacket := []uint16{PTY_SIGNAL_RESIZE_WINDOW, uint16(win.Width), uint16(win.Height)}
 			err := binary.Write(buf, binary.LittleEndian, signalPacket)
 			if err != nil {
-				log.Println(err)
+				letf.Println(err)
 			}
 			n, err := tty.Write(buf.Bytes())
 			if n != 6 || err != nil {
-				log.Println(err)
+				letf.Println(err)
 			}
 		} else {
 			if shrink {
@@ -227,7 +235,7 @@ func OpenSshPTY(s gl.Session) {
 
 	go io.Copy(stdin, s)
 	io.Copy(s, stdout)
-	log.Println(args, "done")
+	ltf.Println(args, "done")
 }
 
 // create buffer for string
