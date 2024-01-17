@@ -56,7 +56,7 @@ func ShellOrExec(s gl.Session) {
 	defer func() {
 		ltf.Println(RemoteAddr, "done")
 		if s != nil {
-			s.Close()
+			s.Exit(0)
 		}
 	}()
 

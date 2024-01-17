@@ -158,6 +158,7 @@ func (sess *session) handleRequests(reqs <-chan *ssh.Request) {
 
 			go func() {
 				handler(sess)
+				sess.Exit(0) // sure?
 			}()
 			// gl.SetAgentRequested(sess.ctx)
 			// req.Reply(true, nil)
@@ -190,7 +191,7 @@ func Keepalive(s gl.Session, ClientAliveInterval time.Duration, ServerAliveCount
 			return
 		}
 		if i <= 0 || t == nil {
-			s.Close()
+			s.Exit(0)
 			return
 		}
 		select {
