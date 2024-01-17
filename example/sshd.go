@@ -23,8 +23,6 @@ import (
 
 const (
 	Addr      = ":2222"
-	ansiReset = "\u001B[0m"
-	ansiRedBG = "\u001B[41m"
 )
 
 var (
