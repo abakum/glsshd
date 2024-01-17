@@ -158,7 +158,6 @@ func (sess *session) handleRequests(reqs <-chan *ssh.Request) {
 
 			go func() {
 				handler(sess)
-				sess.Exit(0) // sure?
 			}()
 			// gl.SetAgentRequested(sess.ctx)
 			// req.Reply(true, nil)
