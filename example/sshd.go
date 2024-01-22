@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	Addr      = ":2222"
+	Addr = ":2222"
 )
 
 var (
@@ -119,6 +119,7 @@ func main() {
 
 	//only for shell or exec
 	gl.Handle(func(s gl.Session) {
+		defer s.Exit(0)
 		ShellOrExec(s)
 	})
 
