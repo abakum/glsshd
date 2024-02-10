@@ -53,7 +53,12 @@ func NoPTY(s gl.Session) {
 // for shell and exec
 func ShellOrExec(s gl.Session) {
 	RemoteAddr := s.RemoteAddr()
-	defer ltf.Println(RemoteAddr, "done")
+	defer func() {
+		ltf.Println(RemoteAddr, "done")
+		// if s != nil {
+		// 	s.Exit(0)
+		// }
+	}()
 
 	ptyReq, winCh, isPty := s.Pty()
 	if !isPty {
