@@ -91,7 +91,7 @@ func NewAgentListener(s gl.Session) (net.Listener, error) {
 	return l, nil
 }
 
-func ShArgs(commands []string) (args []string) {
+func ShArgs(s gl.Session) (args []string) {
 	const SH = "/bin/sh"
 	path := ""
 	var err error
@@ -112,9 +112,9 @@ func ShArgs(commands []string) (args []string) {
 	}
 
 	args = []string{path}
-	if len(commands) > 0 {
+	if s.RawCommand!="" {
 		args = append(args, "-c")
-		args = append(args, commands...)
+		args = append(args, s.RawCommand)
 	}
 	return
 }

@@ -57,14 +57,14 @@ func GetHostKey(ssh string) (pri string) {
 }
 
 // powershell instead cmd
-func psArgs(commands []string) (args []string) {
+func psArgs(s gl.Session) (args []string) {
 	args = []string{"powershell.exe", "-NoProfile", "-NoLogo"}
-	if len(commands) > 0 {
+	if s.RawCommand() != "" {
 		args = append(args,
 			"-NonInteractive",
 			"-Command",
 		)
-		args = append(args, commands...)
+		args = append(args, s.RawCommand())
 	} else {
 		args = append(args,
 			"-Mta", //for Win7
@@ -74,7 +74,7 @@ func psArgs(commands []string) (args []string) {
 }
 
 // cmd or powershell as shell
-func ShArgs(commands []string) (args []string) {
+func ShArgs(s gl.Session) (args []string) {
 	const SH = "cmd.exe"
 	path := ""
 	var err error
@@ -87,13 +87,13 @@ func ShArgs(commands []string) (args []string) {
 		}
 	}
 	if err != nil {
-		args = psArgs(commands)
+		args = psArgs(s)
 		return
 	}
 	args = []string{path}
-	if len(commands) > 0 {
+	if s.RawCommand() != "" {
 		args = append(args, "/c")
-		args = append(args, commands...)
+		args = append(args, s.RawCommand())
 	}
 	return
 }

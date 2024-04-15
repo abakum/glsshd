@@ -12,7 +12,7 @@ import (
 // `ssh -p 2222 a@127.0.0.1 command`
 // `ssh -p 2222 a@127.0.0.1 -T`
 func NoPTY(s gl.Session) {
-	args := ShArgs(s.Command())
+	args := ShArgs(s)
 	e := Env(s, args[0])
 
 	cmd := exec.Command(args[0], args[1:]...)
@@ -73,7 +73,7 @@ func ShellOrExec(s gl.Session) {
 		NoPTY(s)
 		return
 	}
-	args := ShArgs(s.Command())
+	args := ShArgs(s)
 	defer func() {
 		ltf.Println(args, "done")
 		if stdout != nil {
