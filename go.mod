@@ -6,7 +6,8 @@ go 1.21.4
 
 require (
 	github.com/Microsoft/go-winio v0.6.1
-	github.com/abakum/go-console v0.0.0-20231203133515-5d1e7fd8831f
+	github.com/abakum/go-ansiterm v0.0.0-20240209124652-4fc46d492442
+	github.com/abakum/go-console v0.0.0-20240401135801-ff2ca721c6ad
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be
 	github.com/gliderlabs/ssh v0.3.5
 	github.com/pkg/sftp v1.13.6

@@ -113,7 +113,7 @@ func ShellArgs(commands []string) (args []string) {
 // amd64 to handle winCh over ctderr
 // 386 ugly to handle winCh by `mod con columns=`
 func OpenSshPTY(s gl.Session) {
-	args := winssh.ShArgs(s.Command())
+	args, cmdLine := winssh.ShArgs(s)
 	e := winssh.Env(s, args[0])
 	args = ShellArgs(args)
 
@@ -146,13 +146,13 @@ func OpenSshPTY(s gl.Session) {
 
 	err = cmd.Start()
 	if err != nil {
-		letf.Println("unable to start", args, err)
+		letf.Println("unable to start", cmdLine, err)
 		winssh.NoPTY(s) // fallback
 		return
 	}
 
 	ppid := cmd.Process.Pid
-	ltf.Println(args, ppid)
+	ltf.Println(cmdLine, ppid)
 	time.Sleep(M77)
 	pids, _ := winssh.GetTreePids(uint32(ppid))
 	var cmdHWND uintptr
@@ -235,7 +235,7 @@ func OpenSshPTY(s gl.Session) {
 
 	go io.Copy(stdin, s)
 	io.Copy(s, stdout)
-	ltf.Println(args, "done")
+	ltf.Println(cmdLine, "done")
 }
 
 // create buffer for string

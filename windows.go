@@ -73,31 +73,6 @@ func psArgs(s gl.Session) (args []string) {
 	return
 }
 
-// cmd or powershell as shell
-func ShArgs(s gl.Session) (args []string) {
-	const SH = "cmd.exe"
-	path := ""
-	var err error
-	for _, shell := range []string{
-		os.Getenv("ComSpec"),
-		SH,
-	} {
-		if path, err = exec.LookPath(shell); err == nil {
-			break
-		}
-	}
-	if err != nil {
-		args = psArgs(s)
-		return
-	}
-	args = []string{path}
-	if s.RawCommand() != "" {
-		args = append(args, "/c")
-		args = append(args, s.RawCommand())
-	}
-	return
-}
-
 // https://gist.github.com/gekigek99/94f3629e929d514ca6eed55e111ae442
 // GetTreePids will return a list of pids that represent the tree of process pids originating from the specified one.
 // (they are ordered: [parent, 1 gen child, 2 gen child, ...])
@@ -327,13 +302,44 @@ func pipe(sess *session) string {
 	return fmt.Sprintf(`%s\%s\%s\%s`, PIPE, authAgentPipe, sess.LocalAddr(), sess.RemoteAddr())
 }
 
-// set Home of user
-func Home(s gl.Session) string {
-	users, _ := filepath.Split(os.Getenv("USERPROFILE"))
-	user := filepath.Join(users, s.User())
-	_, err := os.Stat(user)
-	if err == nil {
-		return user
+// `ssh -p 2222 a@127.0.0.1 command`
+// `ssh -p 2222 a@127.0.0.1 -T`
+func NoPTY(s gl.Session) {
+	args, cmdLine := ShArgs(s)
+	e := Env(s, args[0])
+
+	cmd := exec.Command(args[0])
+	cmd.SysProcAttr = &syscall.SysProcAttr{CmdLine: cmdLine}
+	cmd.Dir = Home(s)
+	cmd.Env = append(os.Environ(), e...)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		letf.Println("unable to open stdout pipe", err)
+		return
 	}
-	return users
+
+	cmd.Stderr = cmd.Stdout
+
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		letf.Println("unable to open stdin pipe", err)
+		return
+	}
+
+	err = cmd.Start()
+	if err != nil {
+		letf.Println("could not start", cmdLine, err)
+		return
+	}
+	ppid := cmd.Process.Pid
+	ltf.Println(cmdLine, ppid)
+
+	go func() {
+		<-s.Context().Done()
+		stdout.Close()
+	}()
+
+	go io.Copy(stdin, s)
+	go io.Copy(s, stdout)
+	ltf.Println(cmdLine, "done", cmd.Wait())
 }

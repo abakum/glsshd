@@ -1,53 +1,69 @@
 package winssh
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"os/user"
+	"runtime"
+	"strings"
+	"time"
 
+	"github.com/abakum/go-ansiterm"
 	"github.com/abakum/go-console"
 	gl "github.com/gliderlabs/ssh"
 )
 
-// `ssh -p 2222 a@127.0.0.1 command`
-// `ssh -p 2222 a@127.0.0.1 -T`
-func NoPTY(s gl.Session) {
-	args := ShArgs(s)
-	e := Env(s, args[0])
-
-	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Dir = Home(s)
-	cmd.Env = append(os.Environ(), e...)
-	stdout, err := cmd.StdoutPipe()
+// set Home of user
+func Home(s gl.Session) string {
+	u, err := user.Lookup(s.User())
 	if err != nil {
-		letf.Println("unable to open stdout pipe", err)
-		return
+		return "/nonexistent"
 	}
+	return u.HomeDir
+}
 
-	cmd.Stderr = cmd.Stdout
-
-	stdin, err := cmd.StdinPipe()
+// shell
+func ShArgs(s gl.Session) (args []string, cmdLine string) {
+	sh := "bash"
+	env := "SHELL"
+	win := runtime.GOOS == "windows"
+	if win {
+		sh = "cmd.exe"
+		env = "COMSPEC"
+	}
+	var err error
+	for _, shell := range []string{
+		os.Getenv(env),
+		sh,
+	} {
+		if cmdLine, err = exec.LookPath(shell); err == nil {
+			break
+		}
+	}
 	if err != nil {
-		letf.Println("unable to open stdin pipe", err)
-		return
+		cmdLine = sh
 	}
-
-	err = cmd.Start()
-	if err != nil {
-		letf.Println("could not start", args, err)
-		return
+	args = []string{cmdLine}
+	if s.RawCommand() != "" {
+		if win {
+			cmdLine = fmt.Sprintf(`%s /c %s`, quote(args[0]), quote(s.RawCommand()))
+			args = append(args, "/c")
+		} else {
+			cmdLine = fmt.Sprintf(`%s -c %s`, args[0], s.RawCommand())
+			args = append(args, "-c")
+		}
+		args = append(args, s.RawCommand())
 	}
-	ppid := cmd.Process.Pid
-	ltf.Println(args, ppid)
+	return
+}
 
-	go func() {
-		<-s.Context().Done()
-		stdout.Close()
-	}()
-
-	go io.Copy(stdin, s)
-	io.Copy(s, stdout)
-	ltf.Println(args, "done")
+func quote(s string) string {
+	if strings.Contains(s, " ") {
+		return fmt.Sprintf(`"%s"`, s)
+	}
+	return s
 }
 
 // for shell and exec
@@ -55,9 +71,6 @@ func ShellOrExec(s gl.Session) {
 	RemoteAddr := s.RemoteAddr()
 	defer func() {
 		ltf.Println(RemoteAddr, "done")
-		// if s != nil {
-		// 	s.Exit(0)
-		// }
 	}()
 
 	ptyReq, winCh, isPty := s.Pty()
@@ -73,25 +86,26 @@ func ShellOrExec(s gl.Session) {
 		NoPTY(s)
 		return
 	}
-	args := ShArgs(s)
-	defer func() {
-		ltf.Println(args, "done")
-		if stdout != nil {
-			// stdout.Close()
-			stdout.Kill()
-		}
-	}()
+	args, cmdLine := ShArgs(s)
+	// defer func() {
+	// 	ltf.Println(cmdLine, "done")
+	// 	if stdout != nil {
+	// 		stdout.Close()
+	// 		// stdout.Kill()
+	// 	}
+	// }()
 	stdout.SetCWD(Home(s))
 	stdout.SetENV(Env(s, args[0]))
 	err = stdout.Start(args)
 	if err != nil {
-		letf.Println("unable to start", args, err)
+		letf.Println("unable to start", cmdLine, err)
 		NoPTY(s)
 		return
 	}
 
+	SetConsoleTitle(s)
 	ppid, _ := stdout.Pid()
-	ltf.Println(args, ppid)
+	ltf.Println(cmdLine, ppid)
 	go func() {
 		for {
 			if stdout == nil || s == nil {
@@ -115,7 +129,13 @@ func ShellOrExec(s gl.Session) {
 	}()
 
 	go io.Copy(stdout, s)
-	io.Copy(s, stdout)
+	go io.Copy(s, stdout)
+	ps, err := stdout.Wait()
+	ec := 0
+	if err == nil && ps != nil {
+		ec = ps.ExitCode()
+	}
+	ltf.Println(cmdLine, "done", err, ec)
 }
 
 // parent done
@@ -128,4 +148,24 @@ func PDone(ppid int) (err error) {
 		}
 	}
 	return
+}
+
+// Баннер без префикса SSH2
+func CutSSH2(s string) string {
+	const SSH2 = "SSH-2.0-"
+	after, _ := strings.CutPrefix(s, SSH2)
+	return after
+}
+
+// Меняю заголовок окна у клиента
+func SetConsoleTitle(s gl.Session) {
+	const OSSH = "OpenSSH_for_Windows"
+	clientVersion := s.Context().ClientVersion()
+	if s.RawCommand() == "" && !strings.Contains(clientVersion, OSSH) {
+		// Not for OpenSSH_for_Windows
+		time.AfterFunc(time.Millisecond*333, func() {
+			title := fmt.Sprintf("%c]0;%s%c", ansiterm.ANSI_ESCAPE_PRIMARY, CutSSH2(clientVersion)+"@"+CutSSH2(s.Context().ServerVersion()), ansiterm.ANSI_BEL)
+			s.Write([]byte(title))
+		})
+	}
 }
