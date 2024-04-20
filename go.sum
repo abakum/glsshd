@@ -4,6 +4,8 @@ github.com/abakum/embed-encrypt v0.0.0-20240330115809-059354cfa29a h1:oEgwvGevRW
 github.com/abakum/embed-encrypt v0.0.0-20240330115809-059354cfa29a/go.mod h1:sqz1uKdwEKhzQXuAavnB11+Nu9ZysDfJUcnqNbh05QU=
 github.com/abakum/go-ansiterm v0.0.0-20240209124652-4fc46d492442 h1:SsivDZBadH7DqG/Wfilz3+HW/WBuEz4Iw+T6yqo5uvU=
 github.com/abakum/go-ansiterm v0.0.0-20240209124652-4fc46d492442/go.mod h1:WzQf6EqfkRdEyEveQ6edF8KNbe3UW1jVDBmV2uVkNLs=
+github.com/abakum/go-console v0.0.0-20240419214251-0976f7fafdaf h1:iORMHAKLpe0/4ioE6WPnJC60hSWomBiqdK3TZYBXbVA=
+github.com/abakum/go-console v0.0.0-20240419214251-0976f7fafdaf/go.mod h1:gfqhdehD8zSh7gJFDMKveBzqqxcxErHCQtpY6kmgSeo=
 github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be h1:9AeTilPcZAjCFIImctFaOjnTIavg87rW78vTPkQqLI8=
 github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be/go.mod h1:ySMOLuWl6zY27l47sB3qLNK6tF2fkHG55UZxx8oIVo4=
 github.com/creack/pty v1.1.21 h1:1/QdRyBaHHJP61QkWMXlOIBfsgdDeeKfK8SYVUWJKf0=

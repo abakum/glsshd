@@ -87,13 +87,6 @@ func ShellOrExec(s gl.Session) {
 		return
 	}
 	args, cmdLine := ShArgs(s)
-	// defer func() {
-	// 	ltf.Println(cmdLine, "done")
-	// 	if stdout != nil {
-	// 		stdout.Close()
-	// 		// stdout.Kill()
-	// 	}
-	// }()
 	stdout.SetCWD(Home(s))
 	stdout.SetENV(Env(s, args[0]))
 	err = stdout.Start(args)

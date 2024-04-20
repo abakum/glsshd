@@ -100,19 +100,12 @@ func NewAgentListener(s gl.Session) (net.Listener, error) {
 
 func AllDone(ppid int) (err error) {
 	ltf.Println("AllDone", ppid)
-	pgid, err := syscall.Getpgid(ppid)
-	if err == nil {
-		err = syscall.Kill(-pgid, 15)
-		if err == nil {
-			ltf.Println("pgid", pgid, "done")
-			return
-		}
-	}
+	KidsDone(ppid)
 	return PDone(ppid)
 }
 
 func KidsDone(ppid int) (err error) {
-	ltf.Println("AllDone", ppid)
+	ltf.Println("KidsDone", ppid)
 	pgid, err := syscall.Getpgid(ppid)
 	if err == nil {
 		err = syscall.Kill(-pgid, 15)
