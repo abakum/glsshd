@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"syscall"
 
 	gl "github.com/gliderlabs/ssh"
 )
@@ -96,25 +95,6 @@ func NewAgentListener(s gl.Session) (net.Listener, error) {
 		return nil, err
 	}
 	return l, nil
-}
-
-func AllDone(ppid int) (err error) {
-	ltf.Println("AllDone", ppid)
-	KidsDone(ppid)
-	return PDone(ppid)
-}
-
-func KidsDone(ppid int) (err error) {
-	ltf.Println("KidsDone", ppid)
-	pgid, err := syscall.Getpgid(ppid)
-	if err == nil {
-		err = syscall.Kill(-pgid, 15)
-		if err == nil {
-			ltf.Println("pgid", pgid, "done")
-			return
-		}
-	}
-	return
 }
 
 func Env(s gl.Session, shell string) (e []string) {

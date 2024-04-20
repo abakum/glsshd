@@ -10,6 +10,7 @@ require (
 	github.com/abakum/go-console v0.0.0-20240419214251-0976f7fafdaf
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be
 	github.com/gliderlabs/ssh v0.3.5
+	github.com/mitchellh/go-ps v1.0.0
 	github.com/pkg/sftp v1.13.6
 	github.com/xlab/closer v1.1.0
 	github.com/zzl/go-win32api/v2 v2.1.0

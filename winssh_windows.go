@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"sync"
 	"syscall"
 	"unsafe"
@@ -150,47 +149,6 @@ func contains(list []uint32, e uint32) bool {
 		}
 	}
 	return false
-}
-
-// done all chield of ppid and ppid
-func AllDone(ppid int) (err error) {
-	ltf.Println("AllDone", ppid)
-	pids, err := GetTreePids(uint32(ppid))
-	slices.Reverse(pids)
-	if err == nil {
-		for _, pid := range pids {
-			Process, err := os.FindProcess(int(pid))
-			if err == nil {
-				err = Process.Kill()
-				if err == nil {
-					ltf.Println("pid", pid, "done")
-				}
-			}
-		}
-		return
-	}
-	return
-}
-
-// done all chield of ppid
-func KidsDone(ppid int) (err error) {
-	ltf.Println("kidsDone", ppid)
-	pids, err := GetTreePids(uint32(ppid))
-	if err == nil && len(pids) > 1 {
-		pids = pids[1:]
-		slices.Reverse(pids)
-		for _, pid := range pids {
-			Process, err := os.FindProcess(int(pid))
-			if err == nil {
-				err = Process.Kill()
-				if err == nil {
-					ltf.Println("pid", pid, "done")
-				}
-			}
-		}
-		return
-	}
-	return err
 }
 
 // if s done then close l

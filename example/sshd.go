@@ -36,7 +36,7 @@ var (
 func main() {
 	defer closer.Close()
 	closer.Bind(func() {
-		AllDone(os.Getpid())
+		KidsDone(os.Getpid())
 	})
 
 	ForwardedTCPHandler := &gl.ForwardedTCPHandler{}

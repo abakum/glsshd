@@ -13,6 +13,7 @@ import (
 	"github.com/abakum/go-ansiterm"
 	"github.com/abakum/go-console"
 	gl "github.com/gliderlabs/ssh"
+	"github.com/mitchellh/go-ps"
 )
 
 // set Home of user
@@ -131,16 +132,31 @@ func ShellOrExec(s gl.Session) {
 	ltf.Println(cmdLine, "done", err, ec)
 }
 
-// parent done
-func PDone(ppid int) (err error) {
-	Process, err := os.FindProcess(ppid)
+func PidDone(pid int) {
+	Process, err := os.FindProcess(pid)
 	if err == nil {
-		err = Process.Kill()
-		if err == nil {
-			ltf.Println("ppid", ppid, "done")
+		ltf.Println("pid", pid, "done", Process.Kill())
+		return
+	}
+	ltf.Println("pid", pid, err)
+}
+
+func KidsDone(ppid int) {
+	if ppid < 1 {
+		return
+	}
+	pes, err := ps.Processes()
+	if err != nil {
+		return
+	}
+	for _, p := range pes {
+		if p == nil {
+			continue
+		}
+		if p.PPid() == ppid && p.Pid() != ppid {
+			PidDone(p.Pid())
 		}
 	}
-	return
 }
 
 // Баннер без префикса SSH2
