@@ -132,6 +132,6 @@ func SessionRequest(s gl.Session, requestType string) bool {
 	if s == nil {
 		return false
 	}
-	ltf.Println(s.RemoteAddr(), requestType, s.Command())
+	ltf.Println(s.RemoteAddr(), requestType, s.RawCommand())
 	return true
 }

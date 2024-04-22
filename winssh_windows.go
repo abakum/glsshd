@@ -203,11 +203,7 @@ func Env(s gl.Session, shell string) (e []string) {
 	if isPty {
 		if ptyReq.Term != "" {
 			e = append(e,
-				// "TERM="+ptyReq.Term,
-				"TERM=xterm-256color",
-				// "TERM=xterm-mono",
-				// "TERM=vt220",
-				// "TERM=vt100",
+				"TERM="+ptyReq.Term,
 			)
 		}
 		e = append(e,
@@ -216,7 +212,7 @@ func Env(s gl.Session, shell string) (e []string) {
 	}
 	e = append(e,
 		fmt.Sprintf(`HOME=%s%s\%s`, os.Getenv("HOMEDRIVE"), os.Getenv("HOMEPATH"), s.User()),
-		fmt.Sprintf("PROMPT=%s@%s$S$P$G", s.User(), os.Getenv("COMPUTERNAME")),
+		// fmt.Sprintf("PROMPT=%s@%s$S$P$G", s.User(), os.Getenv("COMPUTERNAME")),
 		fmt.Sprintf("SHELL=%s", shell),
 	)
 	return
