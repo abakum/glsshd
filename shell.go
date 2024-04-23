@@ -195,3 +195,11 @@ func UserHomeDirs(dirs ...string) (s string) {
 	os.MkdirAll(s, 0700)
 	return
 }
+
+func SessionRequestCallback(s gl.Session, requestType string) bool {
+	if s == nil {
+		return false
+	}
+	ltf.Println(s.RemoteAddr(), requestType, s.RawCommand())
+	return true
+}

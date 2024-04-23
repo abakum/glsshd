@@ -69,9 +69,9 @@ func main() {
 			"sftp":           SubsystemHandlerSftp,  // to allow sftp
 			AgentRequestType: SubsystemHandlerAgent, // to allow agent forwarding
 		},
-		SessionRequestCallback: SessionRequest,     //SessionRequestCallback,
-		IdleTimeout:            -time.Second * 100, //-ClientAliveInterval
-		MaxTimeout:             -time.Second * 300, //-ServerAliveCountMax*ClientAliveInterval
+		SessionRequestCallback: SessionRequestCallback, //SessionRequestCallback,
+		IdleTimeout:            -time.Second * 100,     //-ClientAliveInterval
+		MaxTimeout:             -time.Second * 300,     //-ServerAliveCountMax*ClientAliveInterval
 	}
 
 	cwd, err := os.Getwd()
@@ -126,12 +126,4 @@ func main() {
 	ltf.Println("starting ssh server on", sshd.Addr)
 	letf.Fatal(sshd.ListenAndServe())
 
-}
-
-func SessionRequest(s gl.Session, requestType string) bool {
-	if s == nil {
-		return false
-	}
-	ltf.Println(s.RemoteAddr(), requestType, s.RawCommand())
-	return true
 }
