@@ -22,6 +22,7 @@ require (
 	github.com/creack/pty v1.1.21 // indirect
 	github.com/iamacarpet/go-winpty v1.0.4 // indirect
 	github.com/kr/fs v0.1.0 // indirect
+	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/stretchr/testify v1.8.1 // indirect
 	golang.org/x/sys v0.19.0 // indirect
 )
