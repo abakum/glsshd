@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 
 	gl "github.com/gliderlabs/ssh"
 )
@@ -19,15 +20,15 @@ func GetUserKeysPaths(ssh string, fns ...string) []string {
 	return append(fns[:],
 		path.Join(ssh, authorizedKeys),
 		path.Join("~", ".ssh", authorizedKeys),
-		path.Join("/etc", "dropbear", authorizedKeys),
+		path.Join(EtcDirs("dropbear"), authorizedKeys),
 	)
 }
 
 // get one key
 func GetHostKey(ssh string) (pri string) {
 	for _, dir := range []string{
-		path.Join("/etc", "ssh"),
-		path.Join("/etc", "dropbear"),
+		EtcDirs("ssh"),
+		EtcDirs("dropbear"),
 		ssh,
 	} {
 		for _, key := range []string{
@@ -154,4 +155,12 @@ func NoPTY(s gl.Session) {
 	go io.Copy(stdin, s)
 	go io.Copy(s, stdout)
 	ltf.Println(cmdLine, "done", cmd.Wait())
+}
+
+// etc
+func EtcDirs(dirs ...string) (s string) {
+	dirs = append([]string{"/etc"}, dirs...)
+	s = filepath.Join(dirs...)
+	os.MkdirAll(s, 0755)
+	return
 }

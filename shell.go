@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -177,4 +178,20 @@ func SetConsoleTitle(s gl.Session) {
 			s.Write([]byte(title))
 		})
 	}
+}
+
+// Упрямый вариант
+func UserHomeDirs(dirs ...string) (s string) {
+	var err error
+	s, err = os.UserHomeDir()
+	if err != nil {
+		s, err = os.UserConfigDir()
+		if err != nil {
+			s, _ = os.MkdirTemp("", "UserDir")
+		}
+	}
+	dirs = append([]string{s}, dirs...)
+	s = filepath.Join(dirs...)
+	os.MkdirAll(s, 0700)
+	return
 }
