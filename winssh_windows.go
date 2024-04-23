@@ -10,12 +10,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"sync"
 	"syscall"
 
 	"github.com/Microsoft/go-winio"
 	gl "github.com/gliderlabs/ssh"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/sys/windows"
 )
 
 const (
@@ -206,4 +209,16 @@ func EtcDirs(dirs ...string) (s string) {
 	s = filepath.Join(dirs...)
 	os.MkdirAll(s, 0755)
 	return
+}
+
+func UserName() string {
+	return os.Getenv("USERNAME")
+}
+
+func Banner(ss ...string) string {
+	majorVersion, minorVersion, buildNumber := windows.RtlGetNtVersionNumbers()
+	return strings.Join(append(ss,
+		runtime.GOOS,
+		fmt.Sprintf("%d.%d.%d", majorVersion, minorVersion, buildNumber),
+	), "_")
 }

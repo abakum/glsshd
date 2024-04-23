@@ -11,8 +11,11 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
+	"strings"
 
 	gl "github.com/gliderlabs/ssh"
+	"github.com/magiconair/properties"
 )
 
 // get authorized keys paths
@@ -163,4 +166,20 @@ func EtcDirs(dirs ...string) (s string) {
 	s = filepath.Join(dirs...)
 	os.MkdirAll(s, 0755)
 	return
+}
+
+func UserName() string {
+	return os.Getenv("USER")
+}
+
+func Banner(ss ...string) string {
+	ss = append(ss, runtime.GOOS)
+	p, err := properties.LoadFile("/etc/os-release", properties.UTF8)
+	if err == nil {
+		id := p.GetString("ID", "")
+		if id != "" {
+			ss = append(ss, id)
+		}
+	}
+	return strings.Join(ss, "_")
 }
