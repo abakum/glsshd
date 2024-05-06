@@ -19,7 +19,11 @@ import (
 
 // set Home of user
 func Home(s gl.Session) string {
-	u, err := user.Lookup(s.User())
+	uString := s.User()
+	if u := s.Context().Value("user"); u != nil {
+		uString = u.(string) //server force user
+	}
+	u, err := user.Lookup(uString)
 	if err != nil {
 		return "/nonexistent"
 	}
